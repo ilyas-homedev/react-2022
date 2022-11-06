@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { RepoCard } from "../components/RepoCard";
 import { useDebounce } from "../hooks/debounce";
-import { useSearchUsersQuery } from "../store/github/github.api";
+import { useLazyGetUserReposQuery, useSearchUsersQuery } from "../store/github/github.api";
 
 export const HomePage = () => {
   const [search, setSearch] = useState("");
@@ -14,10 +15,16 @@ export const HomePage = () => {
     skip: debounced.length < 3,
     refetchOnFocus: true,
   });
+  const [fetchRepos, {isLoading: areReposLoading, data: repos}] = useLazyGetUserReposQuery()
 
   useEffect(() => {
     setDropdown(debounced.length > 3 && users?.length! > 0);
   }, [debounced, users]);
+
+  const clickHandler = (username: string) => {
+    fetchRepos(username);
+    setDropdown(false)
+  }
 
   return (
     <div className="flex justify-center pt-10 mx-auto h-screen w-screen">
@@ -41,6 +48,7 @@ export const HomePage = () => {
               return (
                 <li
                   key={user.id}
+                  onClick={() => clickHandler(user.login)}
                   className="py-2 px-4 hover:bg-gray-500 hover:text-white transition-colors cursor-pointer"
                 >
                   {user.login}
@@ -49,6 +57,11 @@ export const HomePage = () => {
             })}
           </ul>
         )}
+
+        <div className="container">
+          {areReposLoading && <p className="text-center">Repos are loading...</p>}
+          {repos?.map(repo => <RepoCard repo={repo} key={repo.id}/>)}
+        </div>
       </div>
     </div>
   );
